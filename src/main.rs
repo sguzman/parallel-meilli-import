@@ -16,8 +16,25 @@ struct Cli {
     input: PathBuf,
 }
 
-fn main() {
-    println!("Hello, world!");
+struct Input {
+    path: PathBuf,
+    address: String,
+    api: String,
+}
+
+struct DB {
+    address: String,
+    api: String,
+}
+
+fn build_db(input: &Input) -> DB {
+    DB {
+        address: input.address.clone(),
+        api: input.api.clone(),
+    }
+}
+
+fn init() -> Input {
     let matches = Cli::parse();
 
     let dotenv = dotenv::dotenv();
@@ -30,7 +47,30 @@ fn main() {
     let url = build_url(&url, &port);
     println!("Connecting to {}", url);
 
-    let client = build_connection(&url, &api);
+    Input {
+        path: matches.input,
+        address: url,
+        api,
+    }
+}
+
+// Load JSON data from a file
+fn load_data(path: &PathBuf) -> Vec<serde_json::Value> {
+    let data = std::fs::read_to_string(path).expect("Failed to read file");
+    let data: Vec<serde_json::Value> = serde_json::from_str(&data).expect("Failed to parse JSON");
+    data
+}
+
+fn main() {
+    println!("Hello, world!");
+
+    let Input { path, address, api } = init();
+
+    let json_data = load_data(&path);
+
+    let db = DB { address, api };
+    let client = create_db(&db);
+
     // Print info about the client
     println!("Client: {:?}", client);
 
@@ -39,6 +79,10 @@ fn main() {
 
 fn build_url(url: &str, port: &str) -> String {
     format!("http://{}:{}", url, port)
+}
+
+fn create_db(db: &DB) -> meilisearch_sdk::client::Client {
+    build_connection(&db.address, &db.api)
 }
 
 fn build_connection(url: &str, api: &str) -> meilisearch_sdk::client::Client {
