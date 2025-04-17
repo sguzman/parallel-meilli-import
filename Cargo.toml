@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 dotenv = "0.15.0"
 meilisearch-sdk = "0.28.0"
+rayon = "1.10.0"
