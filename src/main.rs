@@ -21,6 +21,32 @@ struct Cli {
     index: Option<String>,
 }
 
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ArxivEntry {
+    pub abstract_text: String,
+    pub authors: String,
+    pub authors_parsed: Vec<Vec<String>>,
+    pub categories: String,
+    pub comments: Option<String>,
+    pub doi: Option<String>,
+    pub id: String,
+    pub journal_ref: Option<String>,
+    pub license: Option<String>,
+    pub report_no: Option<String>,
+    pub submitter: String,
+    pub title: String,
+    pub update_date: String,
+    pub versions: Vec<Version>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Version {
+    pub created: String,
+    pub version: String,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct Input {
     path: PathBuf,
