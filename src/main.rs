@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use clap::Parser;
+use meilisearch_sdk::{errors::Error, task_info::TaskInfo};
 use rand::Rng;
 
 #[derive(Parser)]
@@ -25,7 +26,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ArxivEntry {
-    pub abstract_text: String,
+    pub r#abstract: String,
     pub authors: String,
     pub authors_parsed: Vec<Vec<String>>,
     pub categories: String,
@@ -91,26 +92,25 @@ fn init() -> Input {
 }
 
 // Load JSON data from a file
-fn load_data(path: &PathBuf) -> Vec<serde_json::Value> {
+fn load_data(path: &PathBuf) -> Vec<ArxivEntry> {
     let data = std::fs::read_to_string(path).expect("Failed to read file");
-    let data: Vec<serde_json::Value> = serde_json::from_str(&data).expect("Failed to parse JSON");
+    let data: Vec<ArxivEntry> = serde_json::from_str(&data).expect("Failed to parse JSON");
     data
 }
 
 // Task of insertion into Meilisearch a single item
 // Should initialize a new client
 // and insert the item into the index
-#[tokio::main(flavor = "current_thread")]
-async fn insert_item(input: &Input, name: &str, item: &serde_json::Value) {
-    let db = build_connection(&input);
+async fn insert_item(input: &Input, name: &str, item: &ArxivEntry) -> Result<TaskInfo, Error> {
+    let db = build_connection(input);
     let task = serde_json::to_string(&item).unwrap();
 
     let table = db.index(name);
-    let task = table.add_documents(&[task], Some("id")).await.unwrap();
-    println!("Task: {:#?}", task);
+    return table.add_documents(&[task], Some("id")).await;
 }
 
-fn main() {
+#[tokio::main(flavor = "current_thread")]
+async fn main() {
     println!("Hello, world!");
 
     let input = init();
@@ -128,7 +128,8 @@ fn main() {
     let json_data = load_data(&path);
 
     for item in json_data {
-        insert_item(&input, &index, &item);
+        insert_item(&input, &index, &item).await.unwrap();
+        println!("Inserted item with id: {}", item.id);
     }
 
     println!("Goodbye, world!");
