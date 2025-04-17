@@ -26,7 +26,9 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ArxivEntry {
-    pub r#abstract: String,
+    // Since abstract is a reserved word in Rust, we use `abstract_text` instead
+    #[serde(rename = "abstract")]
+    pub abstract_text: String,
     pub authors: String,
     pub authors_parsed: Vec<Vec<String>>,
     pub categories: String,
