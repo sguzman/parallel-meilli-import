@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 clap = { version = "4.5.36", features = ["derive"] }
 dotenv = "0.15.0"
+futures = { version = "0.3.31", features = ["futures-executor"] }
 meilisearch-sdk = "0.28.0"
 rand = { version = "0.9.1", features = ["log", "nightly", "serde", "simd_support"] }
 rayon = "1.10.0"
