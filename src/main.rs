@@ -34,7 +34,7 @@ pub struct ArxivEntry {
     pub categories: String,
     pub comments: Option<String>,
     pub doi: Option<String>,
-    pub id: String,
+    pub id: u32,
     pub journal_ref: Option<String>,
     pub license: Option<String>,
     pub report_no: Option<String>,
