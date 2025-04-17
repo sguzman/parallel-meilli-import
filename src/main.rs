@@ -14,17 +14,27 @@ struct Cli {
     /// Sets a custom config file
     #[arg(short, long)]
     input: PathBuf,
+
+    // Name of meilisearch index
+    #[arg(short, long)]
+    index: Option<String>,
 }
 
 struct Input {
     path: PathBuf,
     address: String,
     api: String,
+    index: String,
 }
 
 struct DB {
     address: String,
     api: String,
+}
+
+struct Task {
+    db: DB,
+    index: String,
 }
 
 fn build_db(input: &Input) -> DB {
@@ -34,8 +44,22 @@ fn build_db(input: &Input) -> DB {
     }
 }
 
+// Generate a random 5 letter string
+fn generate_random_string() -> String {
+    let chars = "abcdefghijklmnopqrstuvwxyz";
+    let random_string: String = (0..5)
+        .map(|_| {
+            let idx = rand::random::<usize>() % chars.len();
+            chars.chars().nth(idx).unwrap()
+        })
+        .collect();
+    random_string
+}
+
 fn init() -> Input {
     let matches = Cli::parse();
+    let path = matches.input;
+    let index = matches.index.unwrap_or_else(|| generate_random_string());
 
     let dotenv = dotenv::dotenv();
     dotenv.ok().expect("Failed to load .env file");
@@ -48,9 +72,10 @@ fn init() -> Input {
     println!("Connecting to {}", url);
 
     Input {
-        path: matches.input,
+        path,
         address: url,
         api,
+        index,
     }
 }
 
@@ -64,7 +89,12 @@ fn load_data(path: &PathBuf) -> Vec<serde_json::Value> {
 fn main() {
     println!("Hello, world!");
 
-    let Input { path, address, api } = init();
+    let Input {
+        path,
+        address,
+        api,
+        index,
+    } = init();
 
     let json_data = load_data(&path);
 
