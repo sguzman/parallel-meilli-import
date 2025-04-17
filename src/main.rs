@@ -105,10 +105,10 @@ fn load_data(path: &PathBuf) -> Vec<ArxivEntry> {
 // and insert the item into the index
 async fn insert_item(input: &Input, name: &str, item: &ArxivEntry) -> Result<TaskInfo, Error> {
     let db = build_connection(input);
-    let task = serde_json::to_string(&item).unwrap();
 
+    // Pass the struct directly instead of serializing it
     let table = db.index(name);
-    return table.add_documents(&[task], Some("id")).await;
+    table.add_documents(&[item], Some("id")).await
 }
 
 #[tokio::main(flavor = "current_thread")]
