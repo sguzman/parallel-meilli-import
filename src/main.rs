@@ -1,5 +1,25 @@
+use std::path::PathBuf;
+
+use clap::Parser;
+
+#[derive(Parser)]
+#[command(name = "Parallel Meilisearch Import")]
+#[command(bin_name = "parallel-meil")]
+#[command(color = clap::ColorChoice::Always)]
+#[command(about = "Import data into Meilisearch in parallel")]
+#[command(author = "Salvador Guzman")]
+#[command(version = "1.0")]
+#[command(long_about = None)]
+struct Cli {
+    /// Sets a custom config file
+    #[arg(short, long)]
+    input: PathBuf,
+}
+
 fn main() {
     println!("Hello, world!");
+    let matches = Cli::parse();
+
     let dotenv = dotenv::dotenv();
     dotenv.ok().expect("Failed to load .env file");
 
@@ -8,9 +28,11 @@ fn main() {
     let api = dotenv::var("API").expect("API not set");
 
     let url = build_url(&url, &port);
-    let client = build_connection(&url, &api);
+    println!("Connecting to {}", url);
 
-    println!("Connecting to {} on port {}", url, port);
+    let client = build_connection(&url, &api);
+    // Print info about the client
+    println!("Client: {:?}", client);
 
     println!("Goodbye, world!");
 }
