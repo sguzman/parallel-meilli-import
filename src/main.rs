@@ -32,19 +32,19 @@ use serde::{Deserialize, Serialize};
 pub struct ArxivEntry {
     // Since abstract is a reserved word in Rust, we use `abstract_text` instead
     #[serde(rename = "abstract")]
-    pub abstract_text: String,
-    pub authors: String,
+    pub abstract_text: Option<String>,
+    pub authors: Option<String>,
     pub authors_parsed: Vec<Vec<String>>,
-    pub categories: String,
+    pub categories: Option<String>,
     pub comments: Option<String>,
     pub doi: Option<String>,
     pub id: u32,
     pub journal_ref: Option<String>,
     pub license: Option<String>,
     pub report_no: Option<String>,
-    pub submitter: String,
-    pub title: String,
-    pub update_date: String,
+    pub submitter: Option<String>,
+    pub title: Option<String>,
+    pub update_date: Option<String>,
     pub versions: Vec<Version>,
 }
 
@@ -110,12 +110,30 @@ fn load_data(path: &PathBuf) -> Vec<ArxivEntry> {
 // Task of insertion into Meilisearch a single item
 // Should initialize a new client
 // and insert the item into the index
-async fn insert_item(input: &Input, name: &str, item: &ArxivEntry) -> Result<TaskInfo, Error> {
+async fn insert_items(
+    thread_id: usize,
+    input: &Input,
+    name: &str,
+    item: &Vec<ArxivEntry>,
+) -> Result<TaskInfo, Error> {
+    println!(
+        "Thread {}: Inserting {} items into index {}",
+        thread_id,
+        item.len(),
+        name
+    );
     let db = build_connection(input);
 
     // Pass the struct directly instead of serializing it
     let table = db.index(name);
-    table.add_documents(&[item], Some("id")).await
+    table.add_documents(&item, Some("id")).await
+}
+
+// Given a thread, get a slice of the data starting from the thread's index
+fn get_slice(data: Vec<ArxivEntry>, thread: usize, num_threads: usize) -> Vec<ArxivEntry> {
+    let start = (thread - 1) * data.len() / num_threads;
+    let end = thread * data.len() / num_threads;
+    data[start..end].to_vec()
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -134,19 +152,24 @@ async fn main() {
     // Create a vector to hold all the task handles
     let mut tasks = Vec::new();
 
-    for item in json_data {
+    for i in 1..=input.threads {
         let input_clone = input.clone();
         let index_clone = index.clone();
-        let item_clone = item.clone();
-
-        // Spawn a new task for each item
+        let slice = get_slice(json_data.clone(), i, input.threads);
         let task = tokio::spawn(async move {
-            match insert_item(&input_clone, &index_clone, &item_clone).await {
-                Ok(_) => println!("Inserted item with id: {}", item_clone.id),
-                Err(e) => eprintln!("Failed to insert item with id {}: {}", item_clone.id, e),
+            match insert_items(i, &input_clone, &index_clone, &slice).await {
+                Ok(_) => println!(
+                    "Thread {}: Inserted {} items for index: {}",
+                    i,
+                    slice.len(),
+                    index_clone
+                ),
+                Err(e) => eprintln!(
+                    "Thread {}: Failed to insert items for index {}: {}",
+                    i, index_clone, e
+                ),
             }
         });
-
         tasks.push(task);
     }
 
