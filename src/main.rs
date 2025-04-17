@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use clap::Parser;
+use rand::Rng;
 
 #[derive(Parser)]
 #[command(name = "Parallel Meilisearch Import")]
@@ -49,7 +50,7 @@ fn generate_random_string() -> String {
     let chars = "abcdefghijklmnopqrstuvwxyz";
     let random_string: String = (0..5)
         .map(|_| {
-            let idx = rand::random::<usize>() % chars.len();
+            let idx = rand::rng().random_range(0..chars.len());
             chars.chars().nth(idx).unwrap()
         })
         .collect();
