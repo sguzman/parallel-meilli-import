@@ -21,28 +21,12 @@ struct Cli {
     index: Option<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct Input {
     path: PathBuf,
     address: String,
     api: String,
     index: String,
-}
-
-struct DB {
-    address: String,
-    api: String,
-}
-
-struct Task {
-    db: DB,
-    index: String,
-}
-
-fn build_db(input: &Input) -> DB {
-    DB {
-        address: input.address.clone(),
-        api: input.api.clone(),
-    }
 }
 
 // Generate a random 5 letter string
@@ -87,23 +71,39 @@ fn load_data(path: &PathBuf) -> Vec<serde_json::Value> {
     data
 }
 
+// Task of insertion into Meilisearch a single item
+// Should initialize a new client
+// and insert the item into the index
+#[tokio::main(flavor = "current_thread")]
+async fn insert_item(input: &Input, name: &str, item: &serde_json::Value) {
+    let db = build_connection(&input);
+    let task = serde_json::to_string(&item).unwrap();
+
+    let table = db.index(name);
+    let task = table.add_documents(&[task], Some("id")).await.unwrap();
+    println!("Task: {:#?}", task);
+}
+
 fn main() {
     println!("Hello, world!");
 
-    let Input {
-        path,
-        address,
-        api,
-        index,
-    } = init();
+    let input = init();
+    let path = input.path.clone();
+    let address = input.address.clone();
+    let api = input.api.clone();
+    let index = input.index.clone();
+
+    // Print the input data
+    println!("Path: {:?}", path);
+    println!("Address: {}", address);
+    println!("API: {}", api);
+    println!("Index: {}", index);
 
     let json_data = load_data(&path);
 
-    let db = DB { address, api };
-    let client = create_db(&db);
-
-    // Print info about the client
-    println!("Client: {:?}", client);
+    for item in json_data {
+        insert_item(&input, &index, &item);
+    }
 
     println!("Goodbye, world!");
 }
@@ -112,12 +112,11 @@ fn build_url(url: &str, port: &str) -> String {
     format!("http://{}:{}", url, port)
 }
 
-fn create_db(db: &DB) -> meilisearch_sdk::client::Client {
-    build_connection(&db.address, &db.api)
-}
-
-fn build_connection(url: &str, api: &str) -> meilisearch_sdk::client::Client {
+fn build_connection(input: &Input) -> meilisearch_sdk::client::Client {
+    let api = input.api.clone();
+    let url = input.address.clone();
     let key = Some(api);
+
     let opt = meilisearch_sdk::client::Client::new(url, key);
 
     if let Err(e) = opt {
